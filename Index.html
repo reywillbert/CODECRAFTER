@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Editor - Modern HTML Playground</title>
+    <style>
+        :root {
+            --primary: #1a1a1a;
+            --secondary: #2d2d2d;
+            --accent: #00ff88;
+            --text: #ffffff;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'SF Mono', 'Fira Code', monospace;
+        }
+
+        body {
+            background: var(--primary);
+            color: var(--text);
+            min-height: 100vh;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            gap: 15px;
+            background: var(--secondary);
+        }
+
+        .header {
+            padding: 20px;
+            background: var(--glass);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--glass);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .toolbar {
+            display: flex;
+            gap: 10px;
+            padding: 10px;
+            background: var(--glass);
+            border-radius: 8px;
+        }
+
+        .editor-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            flex-grow: 1;
+            height: 70vh;
+        }
+
+        .editor-pane {
+            background: var(--glass);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+        }
+
+        .editor-header {
+            padding: 15px 20px;
+            background: rgba(0, 0, 0, 0.2);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #html-editor {
+            width: 100%;
+            height: calc(100% - 50px);
+            padding: 20px;
+            border: none;
+            outline: none;
+            resize: none;
+            background: transparent;
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        #preview-pane {
+            padding: 20px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.02);
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: var(--glass);
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn:hover {
+            background: var(--accent);
+            color: var(--primary);
+            transform: translateY(-2px);
+        }
+
+        .filename-input {
+            padding: 8px 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            color: var(--text);
+        }
+
+        .status-bar {
+            padding: 10px;
+            background: var(--glass);
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .editor-container {
+                grid-template-columns: 1fr;
+                height: auto;
+            }
+        }
+
+        /* Syntax highlighting for HTML */
+        #html-editor::placeholder { color: #666; }
+        .tag { color: #ff79c6; }
+        .attr { color: #50fa7b; }
+        .value { color: #f1fa8c; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 style="color: var(--accent); margin-bottom: 8px;">🖥️ Neon Editor</h1>
+            <p>Modern HTML Development Environment</p>
+        </div>
+
+        <div class="toolbar">
+            <input type="text" id="filename" class="filename-input" placeholder="filename.html" value="untitled.html">
+            <button class="btn" onclick="saveCode()">
+                💾 Save Session
+            </button>
+            <button class="btn" onclick="exportHTML()">
+                ⬇️ Export HTML
+            </button>
+            <button class="btn" onclick="clearEditor()">
+                🗑️ Clear
+            </button>
+        </div>
+
+        <div class="editor-container">
+            <div class="editor-pane">
+                <div class="editor-header">
+                    <span>📝 Editor</span>
+                    <div class="button-group">
+                        <span class="material-icons">code</span>
+                    </div>
+                </div>
+                <textarea id="html-editor" placeholder="<!DOCTYPE html> 
+<html>
+  <!-- Start coding here -->"
+                    oninput="updatePreview()"></textarea>
+            </div>
+
+            <div class="editor-pane">
+                <div class="editor-header">
+                    <span>🖥️ Preview</span>
+                    <button class="btn" onclick="toggleFullscreen()">
+                        ⛶ Fullscreen
+                    </button>
+                </div>
+                <div id="preview-pane"></div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <span id="status">Ready</span>
+        </div>
+    </div>
+
+    <script>
+        function updatePreview() {
+            try {
+                const code = document.getElementById('html-editor').value;
+                const preview = document.getElementById('preview-pane');
+                preview.innerHTML = code;
+                showStatus('Preview updated');
+            } catch (error) {
+                showStatus(`Error: ${error.message}`, true);
+            }
+        }
+
+        function clearEditor() {
+            document.getElementById('html-editor').value = '';
+            updatePreview();
+            showStatus('Editor cleared');
+        }
+
+        function saveCode() {
+            const code = document.getElementById('html-editor').value;
+            localStorage.setItem('neonEditorCode', code);
+            showStatus('Code saved to browser storage');
+        }
+
+        function exportHTML() {
+            const code = document.getElementById('html-editor').value;
+            const filename = document.getElementById('filename').value || 'untitled.html';
+            
+            const blob = new Blob([`<!DOCTYPE html>\n<html>\n<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>\n<body>\n${code}\n</body>\n</html>`], 
+                { type: 'text/html' });
+            
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+            showStatus(`File downloaded as ${filename}`);
+        }
+
+        function toggleFullscreen() {
+            const previewPane = document.getElementById('preview-pane');
+            if (!document.fullscreenElement) {
+                previewPane.requestFullscreen().catch(err => {
+                    showStatus(`Error entering fullscreen: ${err.message}`, true);
+                });
+            } else {
+                document.exitFullscreen();
+            }
+        }
+
+        function showStatus(message, isError = false) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.style.color = isError ? '#ff5555' : var(--accent);
+            setTimeout(() => {
+                status.style.color = var(--text);
+            }, 2000);
+        }
+
+        // Load saved code
+        window.onload = function() {
+            const savedCode = localStorage.getItem('neonEditorCode');
+            if(savedCode) {
+                document.getElementById('html-editor').value = savedCode;
+                updatePreview();
+            }
+            document.getElementById('html-editor').focus();
+        }
+    </script>
+</body>
+</html>
