@@ -1,78 +1,162 @@
-import React from "react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
-
-export default function NineToFiveGoogleTC() {
-  return (
-    <div
-      className="min-h-screen bg-[#FEFAE0] text-[#333333]"
-      style={{ fontFamily: 'Noto Serif TC, serif' }}
-    >
-      <header className="sticky top-0 z-50 bg-[#C70000] text-[#FFD700] border-b border-[#E5E5E5] shadow-md">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <a href="#" className="text-2xl font-bold">
-            9to5谷歌
-          </a>
-          <nav className="space-x-6 hidden md:flex">
-            <a href="#" className="hover:text-[#FFD700] font-medium">
-              指南
-            </a>
-            <a href="#" className="hover:text-[#FFD700] font-medium">
-              評測
-            </a>
-            <a href="#" className="hover:text-[#FFD700] font-medium">
-              播客
-            </a>
-            <a href="#" className="hover:text-[#FFD700] font-medium">
-              關於
-            </a>
-          </nav>
-          <div className="relative hidden md:block">
-            <Input placeholder="搜尋..." className="pl-10 pr-4 bg-[#FFF9E6]" />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#999999]" />
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-6 py-8">
-        <section className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Card key={i} className="overflow-hidden border-2 border-[#FFD700] rounded-lg">
-              <img
-                src={`https://source.unsplash.com/random/800x400?sig=${i}`}
-                alt="縮圖"
-                className="w-full h-48 object-cover"
-              />
-              <CardContent className="p-5 space-y-3">
-                <span className="inline-block bg-[#00A056] text-white text-xs font-semibold px-3 py-1 rounded">
-                  安卓
-                </span>
-                <h2 className="text-xl font-bold leading-snug">
-                  Android 16 測試版新功能揭曉
-                </h2>
-                <p className="text-sm opacity-75">
-                  2025年4月18日 · Abner Li
-                </p>
-                <p className="text-base">
-                  Android 16 測試版為 Pixel 帶來動態主題、鎖屏顯示以及全新媒體播放器界面。
-                </p>
-                <Button variant="link" className="p-0 text-[#C70000] font-medium">
-                  閱讀更多 →
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
-        </section>
-      </main>
-
-      <footer className="bg-[#FFF5E6] py-6 mt-12 text-center text-sm text-[#666666]">
-        © 2025 GREAT WALLS· 
-        <a href="#" className="underline">隱私政策</a> · 
-        <a href="#" className="underline">服務條款</a> · 
-        <a href="#" className="underline">聯絡我們</a>
-      </footer>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Great Walls</title>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif&display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Noto Serif', serif;
+      background-color: #FEFAE0;
+      color: #333333;
+    }
+    header {
+      background-color: #C70000;
+      color: #FFD700;
+      padding: 1rem 2rem;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #E5E5E5;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    nav a {
+      margin-left: 1rem;
+      color: #FFD700;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    nav a:hover {
+      text-decoration: underline;
+    }
+    .search-box {
+      position: relative;
+    }
+    .search-box input {
+      padding: 0.5rem 1rem 0.5rem 2rem;
+      border: 1px solid #ccc;
+      background-color: #FFF9E6;
+      border-radius: 4px;
+    }
+    .search-box span {
+      position: absolute;
+      left: 8px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #999;
+    }
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+    }
+    .grid {
+      display: grid;
+      gap: 2rem;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    }
+    .card {
+      border: 2px solid #FFD700;
+      border-radius: 8px;
+      overflow: hidden;
+      background-color: #fff;
+    }
+    .card img {
+      width: 100%;
+      height: 200px;
+      object-fit: cover;
+    }
+    .card-content {
+      padding: 1.25rem;
+    }
+    .tag {
+      display: inline-block;
+      background-color: #00A056;
+      color: #fff;
+      font-size: 0.75rem;
+      font-weight: bold;
+      padding: 0.25rem 0.75rem;
+      border-radius: 9999px;
+      margin-bottom: 0.5rem;
+    }
+    .card h2 {
+      font-size: 1.25rem;
+      margin: 0.5rem 0;
+    }
+    .meta {
+      font-size: 0.875rem;
+      color: #666;
+    }
+    .excerpt {
+      font-size: 1rem;
+      margin-top: 0.5rem;
+    }
+    .read-more {
+      display: inline-block;
+      margin-top: 1rem;
+      color: #C70000;
+      text-decoration: none;
+      font-weight: 500;
+    }
+    .read-more:hover {
+      text-decoration: underline;
+    }
+    footer {
+      background-color: #FFF5E6;
+      text-align: center;
+      padding: 1.5rem;
+      font-size: 0.875rem;
+      color: #666;
+    }
+    footer a {
+      color: #666;
+      margin: 0 0.5rem;
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo"><strong>Great Walls</strong></div>
+    <nav>
+      <a href="#">Wallpapers</a>
+      <a href="#">Categories</a>
+      <a href="#">Trending</a>
+      <a href="#">About</a>
+    </nav>
+    <div class="search-box">
+      <span>🔍</span>
+      <input type="text" placeholder="Search wallpapers..." />
     </div>
-  );
-}
+  </header>
+
+  <main>
+    <section class="grid">
+      <!-- Repeat this block for wallpapers -->
+      <div class="card">
+        <img src="https://source.unsplash.com/random/800x400?wallpaper1" alt="Wallpaper thumbnail">
+        <div class="card-content">
+          <div class="tag">Nature</div>
+          <h2>Sunset Over Mountains</h2>
+          <div class="meta">April 18, 2025 · John Doe</div>
+          <p class="excerpt">A stunning high-resolution wallpaper of a golden sunset behind majestic mountains.</p>
+          <a class="read-more" href="#">Download →</a>
+        </div>
+      </div>
+      <!-- More cards can be added here -->
+    </section>
+  </main>
+
+  <footer>
+    © 2025 Great Walls ·
+    <a href="#">Privacy Policy</a> ·
+    <a href="#">Terms of Service</a> ·
+    <a href="#">Contact</a>
+  </footer>
+</body>
+</html>
