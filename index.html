@@ -1,162 +1,52 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Great Walls</title>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif&display=swap" rel="stylesheet">
-  <style>
-    body {
-      margin: 0;
-      font-family: 'Noto Serif', serif;
-      background-color: #FEFAE0;
-      color: #333333;
-    }
-    header {
-      background-color: #C70000;
-      color: #FFD700;
-      padding: 1rem 2rem;
-      position: sticky;
-      top: 0;
-      z-index: 50;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #E5E5E5;
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    nav a {
-      margin-left: 1rem;
-      color: #FFD700;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    nav a:hover {
-      text-decoration: underline;
-    }
-    .search-box {
-      position: relative;
-    }
-    .search-box input {
-      padding: 0.5rem 1rem 0.5rem 2rem;
-      border: 1px solid #ccc;
-      background-color: #FFF9E6;
-      border-radius: 4px;
-    }
-    .search-box span {
-      position: absolute;
-      left: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #999;
-    }
-    main {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 2rem;
-    }
-    .grid {
-      display: grid;
-      gap: 2rem;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-    }
-    .card {
-      border: 2px solid #FFD700;
-      border-radius: 8px;
-      overflow: hidden;
-      background-color: #fff;
-    }
-    .card img {
-      width: 100%;
-      height: 200px;
-      object-fit: cover;
-    }
-    .card-content {
-      padding: 1.25rem;
-    }
-    .tag {
-      display: inline-block;
-      background-color: #00A056;
-      color: #fff;
-      font-size: 0.75rem;
-      font-weight: bold;
-      padding: 0.25rem 0.75rem;
-      border-radius: 9999px;
-      margin-bottom: 0.5rem;
-    }
-    .card h2 {
-      font-size: 1.25rem;
-      margin: 0.5rem 0;
-    }
-    .meta {
-      font-size: 0.875rem;
-      color: #666;
-    }
-    .excerpt {
-      font-size: 1rem;
-      margin-top: 0.5rem;
-    }
-    .read-more {
-      display: inline-block;
-      margin-top: 1rem;
-      color: #C70000;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    .read-more:hover {
-      text-decoration: underline;
-    }
-    footer {
-      background-color: #FFF5E6;
-      text-align: center;
-      padding: 1.5rem;
-      font-size: 0.875rem;
-      color: #666;
-    }
-    footer a {
-      color: #666;
-      margin: 0 0.5rem;
-      text-decoration: underline;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Greenery Website</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <header>
-    <div class="logo"><strong>Great Walls</strong></div>
-    <nav>
-      <a href="#">Wallpapers</a>
-      <a href="#">Categories</a>
-      <a href="#">Trending</a>
-      <a href="#">About</a>
-    </nav>
-    <div class="search-box">
-      <span>🔍</span>
-      <input type="text" placeholder="Search wallpapers..." />
-    </div>
-  </header>
-
-  <main>
-    <section class="grid">
-      <!-- Repeat this block for wallpapers -->
-      <div class="card">
-        <img src="https://source.unsplash.com/random/800x400?wallpaper1" alt="Wallpaper thumbnail">
-        <div class="card-content">
-          <div class="tag">Nature</div>
-          <h2>Sunset Over Mountains</h2>
-          <div class="meta">April 18, 2025 · John Doe</div>
-          <p class="excerpt">A stunning high-resolution wallpaper of a golden sunset behind majestic mountains.</p>
-          <a class="read-more" href="#">Download →</a>
-        </div>
-      </div>
-      <!-- More cards can be added here -->
-    </section>
-  </main>
-
-  <footer>
-    © 2025 Great Walls ·
-    <a href="#">Privacy Policy</a> ·
-    <a href="#">Terms of Service</a> ·
-    <a href="#">Contact</a>
-  </footer>
+    <header>
+        <nav>
+            <ul>
+                <li><a href="#home">Home</a></li>
+                <li><a href="#about">About</a></li>
+                <li><a href="#portfolio">Portfolio</a></li>
+                <li><a href="#contact">Contact</a></li>
+            </ul>
+        </nav>
+    </header>
+    <main>
+        <section id="home">
+            <h1>Welcome to Greenery</h1>
+            <p>A modern, minimal website inspired by nature.</p>
+        </section>
+        <section id="about">
+            <h2>About Us</h2>
+            <p>We are passionate about creating beautiful, functional websites that bring a touch of nature to the digital world.</p>
+        </section>
+        <section id="portfolio">
+            <h2>Our Work</h2>
+            <div class="gallery">
+                <img src="https://via.placeholder.com/300x200?text=Nature+1" alt="Nature Image 1">
+                <img src="https://via.placeholder.com/300x200?text=Nature+2" alt="Nature Image 2">
+                <img src="https://via.placeholder.com/300x200?text=Nature+3" alt="Nature Image 3">
+            </div>
+        </section>
+        <section id="contact">
+            <h2>Contact Us</h2>
+            <form>
+                <input type="text" placeholder="Name">
+                <input type="email" placeholder="Email">
+                <textarea placeholder="Message"></textarea>
+                <button type="submit">Send</button>
+            </form>
+        </section>
+    </main>
+    <footer>
+        <p>&copy; 2025 Greenery Website</p>
+    </footer>
 </body>
-</html>
+  </html>
