@@ -2,74 +2,44 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>GitHub PDF Uploader</title>
+  <title>GitHub PDF Uploader + Search</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body { font-family: system-ui, sans-serif; max-width: 780px; margin: 2rem auto; padding: 0 1rem; }
     h1 { font-size: 1.6rem; }
-    fieldset { border: 1px solid #ddd; padding: 1rem; border-radius: 8px; }
+    fieldset { border: 1px solid #ddd; padding: 1rem; border-radius: 8px; margin-bottom: 1.5rem; }
     label { display: block; margin: 0.5rem 0 0.25rem; font-weight: 600; }
-    input, select, button, textarea { width: 100%; padding: 0.6rem; margin-bottom: 0.75rem; }
+    input, button { width: 100%; padding: 0.6rem; margin-bottom: 0.75rem; }
     input[type="file"] { padding: 0.3rem; }
     button { cursor: pointer; background: #24292f; color: white; border: none; border-radius: 6px; }
     button:disabled { opacity: 0.5; cursor: not-allowed; }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
     .status { margin-top: 1rem; padding: 0.75rem; border-radius: 6px; }
     .status.ok { background: #e6ffed; color: #0f5132; border: 1px solid #b7ebc6; }
     .status.err { background: #ffe6e6; color: #842029; border: 1px solid #f5b5b5; }
-    small.muted { color: #666; }
-    .note { font-size: 0.9rem; color: #444; }
-    a { color: #0969da; }
+    ul { list-style: none; padding: 0; }
+    li { margin: 0.4rem 0; }
+    a { color: #0969da; text-decoration: none; }
+    a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
-  <h1>Upload PDF to GitHub repository</h1>
-  <p class="note">Select a PDF and commit it to your GitHub repo. Your token is used only in your browser to call the GitHub API.</p>
+  <h1>Upload & Search PDFs in GitHub</h1>
 
+  <!-- Upload form -->
   <form id="uploadForm">
     <fieldset>
       <legend>Repository settings</legend>
-      <div class="row">
-        <div>
-          <label for="owner">GitHub username or org</label>
-          <input id="owner" name="owner" type="text" placeholder="e.g., Rey-username" required />
-        </div>
-        <div>
-          <label for="repo">Repository name</label>
-          <input id="repo" name="repo" type="text" placeholder="e.g., pdf-archive" required />
-        </div>
-      </div>
-      <div class="row">
-        <div>
-          <label for="branch">Branch</label>
-          <input id="branch" name="branch" type="text" value="main" required />
-        </div>
-        <div>
-          <label for="folder">Target folder path (optional)</label>
-          <input id="folder" name="folder" type="text" placeholder="e.g., docs/pdfs" />
-        </div>
-      </div>
-      <label for="token">GitHub personal access token</label>
-      <input id="token" name="token" type="password" placeholder="Paste fine-grained PAT with contents:read/write" required />
-      <small class="muted">Never hardcode tokens in code. Paste only when using privately.</small>
+      <label>Owner <input id="owner" required /></label>
+      <label>Repo <input id="repo" required /></label>
+      <label>Branch <input id="branch" value="main" required /></label>
+      <label>Folder (optional) <input id="folder" /></label>
+      <label>Token <input id="token" type="password" required /></label>
     </fieldset>
 
     <fieldset>
-      <legend>File and commit</legend>
-      <label for="file">Choose PDF file</label>
-      <input id="file" name="file" type="file" accept="application/pdf" required />
-      <label for="message">Commit message</label>
-      <input id="message" name="message" type="text" placeholder="Add PDF" value="Add PDF" required />
-      <div class="row">
-        <div>
-          <label for="committerName">Committer name (optional)</label>
-          <input id="committerName" name="committerName" type="text" placeholder="Your name" />
-        </div>
-        <div>
-          <label for="committerEmail">Committer email (optional)</label>
-          <input id="committerEmail" name="committerEmail" type="email" placeholder="you@example.com" />
-        </div>
-      </div>
+      <legend>Upload PDF</legend>
+      <label>Choose PDF <input id="file" type="file" accept="application/pdf" required /></label>
+      <label>Commit message <input id="message" value="Add PDF" required /></label>
     </fieldset>
 
     <button type="submit" id="submitBtn">Upload to GitHub</button>
@@ -77,8 +47,15 @@
 
   <div id="status" class="status" style="display:none;"></div>
 
+  <!-- Search section -->
+  <fieldset>
+    <legend>Search PDFs</legend>
+    <label>Search by name <input id="searchInput" placeholder="Type to filter PDFs..." /></label>
+    <button type="button" id="loadBtn">Load PDFs from Repo</button>
+    <ul id="pdfList"></ul>
+  </fieldset>
+
   <script>
-    const form = document.getElementById('uploadForm');
     const statusBox = document.getElementById('status');
     const submitBtn = document.getElementById('submitBtn');
 
@@ -90,87 +67,36 @@
 
     async function fileToBase64(file) {
       const arrayBuffer = await file.arrayBuffer();
-      // Convert ArrayBuffer to base64 without data URL header
       let binary = '';
       const bytes = new Uint8Array(arrayBuffer);
-      const len = bytes.byteLength;
-      for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+      for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
       return btoa(binary);
     }
 
-    async function getExistingSha({owner, repo, path, token}) {
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
-      const res = await fetch(url, {
-        method: 'GET',
-        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
-      });
-      if (res.status === 200) {
-        const data = await res.json();
-        return data.sha;
-      } else if (res.status === 404) {
-        return null; // does not exist
-      } else {
-        const text = await res.text();
-        throw new Error(`Failed to check existing file: ${res.status} ${text}`);
-      }
-    }
-
-    async function putFile({owner, repo, path, branch, message, base64, token, committer}) {
-      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
-      // Check if file exists to include SHA for overwrite
-      const sha = await getExistingSha({owner, repo, path, token});
-      const body = {
-        message,
-        content: base64,
-        branch
-      };
-      if (committer && (committer.name || committer.email)) {
-        body.committer = {};
-        if (committer.name) body.committer.name = committer.name;
-        if (committer.email) body.committer.email = committer.email;
-      }
-      if (sha) body.sha = sha;
-
+    async function putFile({owner, repo, path, branch, message, base64, token}) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${path}`;
       const res = await fetch(url, {
         method: 'PUT',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/vnd.github+json',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(body)
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' },
+        body: JSON.stringify({ message, content: base64, branch })
       });
-
       const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data && data.message ? data.message : `Upload failed: ${res.status}`);
-      }
-      return data; // includes content.download_url and commit info
+      if (!res.ok) throw new Error(data.message || 'Upload failed');
+      return data;
     }
 
-    form.addEventListener('submit', async (e) => {
+    document.getElementById('uploadForm').addEventListener('submit', async (e) => {
       e.preventDefault();
-      statusBox.style.display = 'none';
+      const owner = owner.value.trim();
+      const repo = repo.value.trim();
+      const branch = branch.value.trim();
+      const folder = folder.value.trim();
+      const token = token.value.trim();
+      const file = document.getElementById('file').files[0];
+      const message = message.value.trim();
 
-      const owner = document.getElementById('owner').value.trim();
-      const repo = document.getElementById('repo').value.trim();
-      const branch = document.getElementById('branch').value.trim();
-      const folder = document.getElementById('folder').value.trim().replace(/^\/+|\/+$/g, '');
-      const token = document.getElementById('token').value.trim();
-      const fileInput = document.getElementById('file');
-      const message = document.getElementById('message').value.trim();
-      const committerName = document.getElementById('committerName').value.trim();
-      const committerEmail = document.getElementById('committerEmail').value.trim();
-
-      if (!owner || !repo || !branch || !token || !fileInput.files.length) {
-        showStatus('Please fill all required fields and select a PDF.', false);
-        return;
-      }
-      const file = fileInput.files[0];
-      if (file.type !== 'application/pdf') {
-        showStatus('Selected file is not a PDF.', false);
-        return;
-      }
+      if (!file) return showStatus('No file selected');
+      if (file.type !== 'application/pdf') return showStatus('Not a PDF');
 
       submitBtn.disabled = true;
       submitBtn.textContent = 'Uploading…';
@@ -178,23 +104,50 @@
       try {
         const base64 = await fileToBase64(file);
         const path = (folder ? folder + '/' : '') + file.name;
-
-        const result = await putFile({
-          owner, repo, path, branch, message, base64, token,
-          committer: { name: committerName, email: committerEmail }
-        });
-
-        const htmlUrl = result && result.content && result.content.html_url
-          ? result.content.html_url
-          : `https://github.com/${owner}/${repo}/tree/${encodeURIComponent(branch)}/${encodeURIComponent(path)}`;
-
-        showStatus(`Success! Committed to ${owner}/${repo}@${branch} as ${path}. View on GitHub: ${htmlUrl}`, true);
+        await putFile({owner, repo, path, branch, message, base64, token});
+        showStatus('Uploaded successfully!', true);
       } catch (err) {
-        showStatus(`Error: ${err.message}`, false);
+        showStatus('Error: ' + err.message);
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = 'Upload to GitHub';
       }
+    });
+
+    // --- Search functionality ---
+    const loadBtn = document.getElementById('loadBtn');
+    const searchInput = document.getElementById('searchInput');
+    const pdfList = document.getElementById('pdfList');
+
+    async function loadPDFs() {
+      pdfList.innerHTML = '';
+      const ownerVal = owner.value.trim();
+      const repoVal = repo.value.trim();
+      const folderVal = folder.value.trim();
+      const tokenVal = token.value.trim();
+      const url = `https://api.github.com/repos/${ownerVal}/${repoVal}/contents/${folderVal || ''}`;
+      const res = await fetch(url, { headers: { 'Authorization': `Bearer ${tokenVal}` } });
+      const data = await res.json();
+      if (!res.ok) return showStatus('Error loading files: ' + data.message);
+      const pdfs = data.filter(f => f.name.toLowerCase().endsWith('.pdf'));
+      pdfs.forEach(f => {
+        const li = document.createElement('li');
+        const a = document.createElement('a');
+        a.href = f.html_url;
+        a.textContent = f.name;
+        a.target = '_blank';
+        li.appendChild(a);
+        pdfList.appendChild(li);
+      });
+    }
+
+    loadBtn.addEventListener('click', loadPDFs);
+
+    searchInput.addEventListener('input', () => {
+      const term = searchInput.value.toLowerCase();
+      [...pdfList.children].forEach(li => {
+        li.style.display = li.textContent.toLowerCase().includes(term) ? '' : 'none';
+      });
     });
   </script>
 </body>
