@@ -1,52 +1,201 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Greenery Website</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <title>GitHub PDF Uploader</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 780px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.6rem; }
+    fieldset { border: 1px solid #ddd; padding: 1rem; border-radius: 8px; }
+    label { display: block; margin: 0.5rem 0 0.25rem; font-weight: 600; }
+    input, select, button, textarea { width: 100%; padding: 0.6rem; margin-bottom: 0.75rem; }
+    input[type="file"] { padding: 0.3rem; }
+    button { cursor: pointer; background: #24292f; color: white; border: none; border-radius: 6px; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
+    .status { margin-top: 1rem; padding: 0.75rem; border-radius: 6px; }
+    .status.ok { background: #e6ffed; color: #0f5132; border: 1px solid #b7ebc6; }
+    .status.err { background: #ffe6e6; color: #842029; border: 1px solid #f5b5b5; }
+    small.muted { color: #666; }
+    .note { font-size: 0.9rem; color: #444; }
+    a { color: #0969da; }
+  </style>
 </head>
 <body>
-    <header>
-        <nav>
-            <ul>
-                <li><a href="#home">Home</a></li>
-                <li><a href="#about">About</a></li>
-                <li><a href="#portfolio">Portfolio</a></li>
-                <li><a href="#contact">Contact</a></li>
-            </ul>
-        </nav>
-    </header>
-    <main>
-        <section id="home">
-            <h1>Welcome to Greenery</h1>
-            <p>A modern, minimal website inspired by nature.</p>
-        </section>
-        <section id="about">
-            <h2>About Us</h2>
-            <p>We are passionate about creating beautiful, functional websites that bring a touch of nature to the digital world.</p>
-        </section>
-        <section id="portfolio">
-            <h2>Our Work</h2>
-            <div class="gallery">
-                <img src="https://via.placeholder.com/300x200?text=Nature+1" alt="Nature Image 1">
-                <img src="https://via.placeholder.com/300x200?text=Nature+2" alt="Nature Image 2">
-                <img src="https://via.placeholder.com/300x200?text=Nature+3" alt="Nature Image 3">
-            </div>
-        </section>
-        <section id="contact">
-            <h2>Contact Us</h2>
-            <form>
-                <input type="text" placeholder="Name">
-                <input type="email" placeholder="Email">
-                <textarea placeholder="Message"></textarea>
-                <button type="submit">Send</button>
-            </form>
-        </section>
-    </main>
-    <footer>
-        <p>&copy; 2025 Greenery Website</p>
-    </footer>
+  <h1>Upload PDF to GitHub repository</h1>
+  <p class="note">Select a PDF and commit it to your GitHub repo. Your token is used only in your browser to call the GitHub API.</p>
+
+  <form id="uploadForm">
+    <fieldset>
+      <legend>Repository settings</legend>
+      <div class="row">
+        <div>
+          <label for="owner">GitHub username or org</label>
+          <input id="owner" name="owner" type="text" placeholder="e.g., Rey-username" required />
+        </div>
+        <div>
+          <label for="repo">Repository name</label>
+          <input id="repo" name="repo" type="text" placeholder="e.g., pdf-archive" required />
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="branch">Branch</label>
+          <input id="branch" name="branch" type="text" value="main" required />
+        </div>
+        <div>
+          <label for="folder">Target folder path (optional)</label>
+          <input id="folder" name="folder" type="text" placeholder="e.g., docs/pdfs" />
+        </div>
+      </div>
+      <label for="token">GitHub personal access token</label>
+      <input id="token" name="token" type="password" placeholder="Paste fine-grained PAT with contents:read/write" required />
+      <small class="muted">Never hardcode tokens in code. Paste only when using privately.</small>
+    </fieldset>
+
+    <fieldset>
+      <legend>File and commit</legend>
+      <label for="file">Choose PDF file</label>
+      <input id="file" name="file" type="file" accept="application/pdf" required />
+      <label for="message">Commit message</label>
+      <input id="message" name="message" type="text" placeholder="Add PDF" value="Add PDF" required />
+      <div class="row">
+        <div>
+          <label for="committerName">Committer name (optional)</label>
+          <input id="committerName" name="committerName" type="text" placeholder="Your name" />
+        </div>
+        <div>
+          <label for="committerEmail">Committer email (optional)</label>
+          <input id="committerEmail" name="committerEmail" type="email" placeholder="you@example.com" />
+        </div>
+      </div>
+    </fieldset>
+
+    <button type="submit" id="submitBtn">Upload to GitHub</button>
+  </form>
+
+  <div id="status" class="status" style="display:none;"></div>
+
+  <script>
+    const form = document.getElementById('uploadForm');
+    const statusBox = document.getElementById('status');
+    const submitBtn = document.getElementById('submitBtn');
+
+    function showStatus(msg, ok=false) {
+      statusBox.textContent = msg;
+      statusBox.className = 'status ' + (ok ? 'ok' : 'err');
+      statusBox.style.display = 'block';
+    }
+
+    async function fileToBase64(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      // Convert ArrayBuffer to base64 without data URL header
+      let binary = '';
+      const bytes = new Uint8Array(arrayBuffer);
+      const len = bytes.byteLength;
+      for (let i = 0; i < len; i++) binary += String.fromCharCode(bytes[i]);
+      return btoa(binary);
+    }
+
+    async function getExistingSha({owner, repo, path, token}) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' }
+      });
+      if (res.status === 200) {
+        const data = await res.json();
+        return data.sha;
+      } else if (res.status === 404) {
+        return null; // does not exist
+      } else {
+        const text = await res.text();
+        throw new Error(`Failed to check existing file: ${res.status} ${text}`);
+      }
+    }
+
+    async function putFile({owner, repo, path, branch, message, base64, token, committer}) {
+      const url = `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(path)}`;
+      // Check if file exists to include SHA for overwrite
+      const sha = await getExistingSha({owner, repo, path, token});
+      const body = {
+        message,
+        content: base64,
+        branch
+      };
+      if (committer && (committer.name || committer.email)) {
+        body.committer = {};
+        if (committer.name) body.committer.name = committer.name;
+        if (committer.email) body.committer.email = committer.email;
+      }
+      if (sha) body.sha = sha;
+
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(body)
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data && data.message ? data.message : `Upload failed: ${res.status}`);
+      }
+      return data; // includes content.download_url and commit info
+    }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      statusBox.style.display = 'none';
+
+      const owner = document.getElementById('owner').value.trim();
+      const repo = document.getElementById('repo').value.trim();
+      const branch = document.getElementById('branch').value.trim();
+      const folder = document.getElementById('folder').value.trim().replace(/^\/+|\/+$/g, '');
+      const token = document.getElementById('token').value.trim();
+      const fileInput = document.getElementById('file');
+      const message = document.getElementById('message').value.trim();
+      const committerName = document.getElementById('committerName').value.trim();
+      const committerEmail = document.getElementById('committerEmail').value.trim();
+
+      if (!owner || !repo || !branch || !token || !fileInput.files.length) {
+        showStatus('Please fill all required fields and select a PDF.', false);
+        return;
+      }
+      const file = fileInput.files[0];
+      if (file.type !== 'application/pdf') {
+        showStatus('Selected file is not a PDF.', false);
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Uploading…';
+
+      try {
+        const base64 = await fileToBase64(file);
+        const path = (folder ? folder + '/' : '') + file.name;
+
+        const result = await putFile({
+          owner, repo, path, branch, message, base64, token,
+          committer: { name: committerName, email: committerEmail }
+        });
+
+        const htmlUrl = result && result.content && result.content.html_url
+          ? result.content.html_url
+          : `https://github.com/${owner}/${repo}/tree/${encodeURIComponent(branch)}/${encodeURIComponent(path)}`;
+
+        showStatus(`Success! Committed to ${owner}/${repo}@${branch} as ${path}. View on GitHub: ${htmlUrl}`, true);
+      } catch (err) {
+        showStatus(`Error: ${err.message}`, false);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Upload to GitHub';
+      }
+    });
+  </script>
 </body>
-  </html>
+</html>
