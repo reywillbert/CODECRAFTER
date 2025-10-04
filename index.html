@@ -1,57 +1,343 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>GitHub PDF Uploader + Search</title>
+  <meta charset="utf-8" />
+  <title>GitHub PDF Uploader & Search</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root { color-scheme: light dark; }
+    body { font-family: system-ui, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background: #0b0c0f; color: #e6e6e6; }
+    header { padding: 16px 20px; background: #16181d; border-bottom: 1px solid #2a2f3a; }
+    h1 { margin: 0; font-size: 20px; }
+    main { display: grid; grid-template-columns: 320px 1fr; gap: 16px; padding: 16px; }
+    section { background: #16181d; border: 1px solid #2a2f3a; border-radius: 8px; padding: 12px; }
+    label { display: block; margin: 10px 0 4px; font-size: 13px; opacity: 0.9; }
+    input, select, button { width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #2a2f3a; background: #0b0c0f; color: #e6e6e6; }
+    input[type="file"] { padding: 6px; }
+    button { cursor: pointer; background: #2b6cff; border: none; color: white; font-weight: 600; }
+    button.secondary { background: #2a2f3a; color: #e6e6e6; }
+    small { display: block; opacity: 0.7; margin-top: 6px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .flex { display: flex; gap: 8px; align-items: center; }
+    .list { height: 50vh; overflow: auto; border: 1px solid #2a2f3a; border-radius: 6px; }
+    .item { padding: 8px 10px; border-bottom: 1px solid #2a2f3a; cursor: pointer; }
+    .item:hover { background: #1f232c; }
+    .item.active { background: #2b6cff22; border-left: 3px solid #2b6cff; }
+    .status { margin-top: 8px; font-size: 13px; }
+    iframe, object { width: 100%; height: 80vh; border: none; background: #0b0c0f; }
+    .viewer-controls { display: flex; gap: 8px; margin-bottom: 8px; }
+    .pill { padding: 6px 10px; border-radius: 999px; background: #2a2f3a; font-size: 12px; }
+    .danger { color: #ff7961; }
+    .success { color: #7cff9e; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace; font-size: 12px; }
+  </style>
 </head>
 <body>
-  <h1>Upload & Search PDFs</h1>
+  <header>
+    <h1>GitHub PDF Uploader & Search</h1>
+  </header>
+  <main>
+    <!-- Left: Configuration + Upload + Search -->
+    <section>
+      <h2 class="mono">Configuration</h2>
+      <label>Personal access token (fine-grained, repo:contents write)
+        <input id="token" type="password" placeholder="ghp_..." />
+      </label>
+      <div class="row">
+        <div>
+          <label>Owner (username or org)
+            <input id="owner" placeholder="your-username" />
+          </label>
+        </div>
+        <div>
+          <label>Repository
+            <input id="repo" placeholder="your-repo" />
+          </label>
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label>Branch
+            <input id="branch" placeholder="main" value="main" />
+          </label>
+        </div>
+        <div>
+          <label>Folder path (created if missing)
+            <input id="folder" placeholder="docs" value="docs" />
+          </label>
+        </div>
+      </div>
+      <div class="flex">
+        <button id="saveCfg">Save config (local)</button>
+        <button class="secondary" id="clearCfg">Clear</button>
+      </div>
+      <small class="mono">Stored only in your browser via localStorage. Never hardcoded.</small>
+      <div class="status mono" id="cfgStatus"></div>
+      <hr />
+      <h2 class="mono">Upload a PDF</h2>
+      <label>Choose PDF
+        <input id="file" type="file" accept="application/pdf" />
+      </label>
+      <div class="row">
+        <div>
+          <label>Target filename (optional)
+            <input id="filename" placeholder="my-file.pdf" />
+          </label>
+        </div>
+        <div>
+          <label>Commit message
+            <input id="commitMsg" placeholder="Add PDF" value="Add PDF" />
+          </label>
+        </div>
+      </div>
+      <button id="upload">Upload to GitHub</button>
+      <div class="status mono" id="uploadStatus"></div>
+      <hr />
+      <h2 class="mono">Search PDFs</h2>
+      <label>Search by filename
+        <input id="search" placeholder="Type to filter (e.g., invoice)" />
+      </label>
+      <div class="flex" style="margin-top:8px;">
+        <button id="refresh">Refresh list</button>
+        <span class="pill mono" id="count">0 items</span>
+      </div>
+      <div id="list" class="list"></div>
+    </section>
 
-  <form id="uploadForm">
-    <label>Owner <input id="ownerInput" required /></label><br>
-    <label>Repo <input id="repoInput" required /></label><br>
-    <label>Branch <input id="branchInput" value="main" required /></label><br>
-    <label>Token <input id="tokenInput" type="password" required /></label><br>
-    <label>Choose PDF <input id="fileInput" type="file" accept="application/pdf" required /></label><br>
-    <label>Commit message <input id="msgInput" value="Add PDF" required /></label><br>
-    <button type="submit" id="submitBtn">Upload to GitHub</button>
-  </form>
-
-  <div id="status"></div>
-
-  <h2>Search PDFs</h2>
-  <input id="searchInput" placeholder="Type to filter PDFs..." />
-  <button type="button" id="loadBtn">Load PDFs</button>
-  <ul id="pdfList"></ul>
+    <!-- Right: Viewer -->
+    <section>
+      <h2 class="mono">Viewer</h2>
+      <div class="viewer-controls">
+        <select id="viewerMode">
+          <option value="pages">Use GitHub Pages URL</option>
+          <option value="raw">Use raw.githubusercontent.com URL</option>
+        </select>
+        <span class="pill mono">Tip: Pages avoids forced download.</span>
+      </div>
+      <div id="viewer"></div>
+      <div class="status mono" id="viewStatus"></div>
+    </section>
+  </main>
 
   <script>
-    const form = document.getElementById('uploadForm');
-    const statusBox = document.getElementById('status');
-    const pdfList = document.getElementById('pdfList');
+    // Basic helpers
+    const $ = (id) => document.getElementById(id);
+    const state = {
+      token: "",
+      owner: "",
+      repo: "",
+      branch: "main",
+      folder: "docs",
+      pdfs: [],
+      activePath: null,
+    };
 
-    function showStatus(msg) {
-      statusBox.textContent = msg;
+    function loadConfig() {
+      const cfg = JSON.parse(localStorage.getItem("gh-pdf-config") || "{}");
+      state.token = cfg.token || "";
+      state.owner = cfg.owner || "";
+      state.repo = cfg.repo || "";
+      state.branch = cfg.branch || "main";
+      state.folder = cfg.folder || "docs";
+      $("token").value = state.token;
+      $("owner").value = state.owner;
+      $("repo").value = state.repo;
+      $("branch").value = state.branch;
+      $("folder").value = state.folder;
+      $("cfgStatus").textContent = state.token ? "Config loaded." : "Enter your token & repo details.";
     }
 
-    // Upload handler
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      showStatus("Upload button clicked (stub).");
-      // Here you’d add the GitHub API upload logic
-    });
+    function saveConfig() {
+      const cfg = {
+        token: $("token").value.trim(),
+        owner: $("owner").value.trim(),
+        repo: $("repo").value.trim(),
+        branch: $("branch").value.trim() || "main",
+        folder: $("folder").value.trim() || "docs",
+      };
+      localStorage.setItem("gh-pdf-config", JSON.stringify(cfg));
+      loadConfig();
+    }
 
-    // Load PDFs handler
-    document.getElementById('loadBtn').addEventListener('click', () => {
-      showStatus("Load PDFs button clicked (stub).");
-      // Here you’d fetch the repo contents
-    });
+    function clearConfig() {
+      localStorage.removeItem("gh-pdf-config");
+      loadConfig();
+    }
 
-    // Search filter
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-      const term = e.target.value.toLowerCase();
-      [...pdfList.children].forEach(li => {
-        li.style.display = li.textContent.toLowerCase().includes(term) ? '' : 'none';
+    function requireConfig() {
+      if (!state.token || !state.owner || !state.repo || !state.branch) {
+        throw new Error("Missing configuration. Provide token, owner, repo, branch.");
+      }
+    }
+
+    // GitHub API request
+    async function gh(path, options = {}) {
+      requireConfig();
+      const url = `https://api.github.com${path}`;
+      const res = await fetch(url, {
+        ...options,
+        headers: {
+          "Authorization": `Bearer ${state.token}`,
+          "Accept": "application/vnd.github+json",
+          ...(options.headers || {})
+        }
       });
+      if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`GitHub API error ${res.status}: ${text}`);
+      }
+      return res.json();
+    }
+
+    // Upload PDF to contents API: PUT /repos/{owner}/{repo}/contents/{path}
+    async function uploadPDF(file, targetFilename, message) {
+      requireConfig();
+      const name = targetFilename || file.name;
+      if (!name.toLowerCase().endsWith(".pdf")) {
+        throw new Error("Target filename must end with .pdf");
+      }
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(String.fromCharCode(...new Uint8Array(arrayBuffer)));
+      const path = `${state.folder ? state.folder.replace(/\/+$/,"") + "/" : ""}${name}`;
+
+      const body = {
+        message: message || `Add ${name}`,
+        content: base64,
+        branch: state.branch
+      };
+
+      // If file exists, include its sha to update
+      let existingSha = null;
+      try {
+        const existing = await gh(`/repos/${state.owner}/${state.repo}/contents/${encodeURIComponent(path)}?ref=${encodeURIComponent(state.branch)}`);
+        if (existing && existing.sha) existingSha = existing.sha;
+      } catch (_) { /* not found is fine */ }
+
+      if (existingSha) body.sha = existingSha;
+
+      const json = await gh(`/repos/${state.owner}/${state.repo}/contents/${encodeURIComponent(path)}`, {
+        method: "PUT",
+        body: JSON.stringify(body)
+      });
+      return json;
+    }
+
+    // List PDFs via tree API: GET /repos/{owner}/{repo}/git/trees/{branch}?recursive=1
+    async function listPDFs() {
+      requireConfig();
+      const tree = await gh(`/repos/${state.owner}/${state.repo}/git/trees/${encodeURIComponent(state.branch)}?recursive=1`);
+      const items = (tree.tree || [])
+        .filter(n => n.type === "blob" && n.path.toLowerCase().endsWith(".pdf"))
+        .map(n => ({ path: n.path, name: n.path.split("/").pop() }));
+      // If a folder is set, prefer PDFs under that folder
+      const folder = state.folder ? state.folder.replace(/\/+$/,"") + "/" : "";
+      const scoped = folder ? items.filter(i => i.path.startsWith(folder)) : items;
+      state.pdfs = scoped;
+      renderList();
+    }
+
+    // Render list and enable filtering
+    function renderList() {
+      const q = $("search").value.trim().toLowerCase();
+      const filtered = q ? state.pdfs.filter(i => i.name.toLowerCase().includes(q)) : state.pdfs;
+      $("count").textContent = `${filtered.length} items`;
+      const list = $("list");
+      list.innerHTML = "";
+      filtered.forEach(i => {
+        const div = document.createElement("div");
+        div.className = "item" + (state.activePath === i.path ? " active" : "");
+        div.textContent = i.name;
+        div.title = i.path;
+        div.onclick = () => {
+          state.activePath = i.path;
+          renderList();
+          renderViewer();
+        };
+        list.appendChild(div);
+      });
+    }
+
+    // Build file URLs for viewing
+    function pagesUrl(path) {
+      // https://<username>.github.io/<repo>/<path>
+      return `https://${state.owner}.github.io/${state.repo}/${path}`;
+    }
+    function rawUrl(path) {
+      // https://raw.githubusercontent.com/<owner>/<repo>/<branch>/<path>
+      return `https://raw.githubusercontent.com/${state.owner}/${state.repo}/${state.branch}/${path}`;
+    }
+
+    function renderViewer() {
+      const target = $("viewer");
+      target.innerHTML = "";
+      $("viewStatus").textContent = "";
+      if (!state.activePath) return;
+
+      const mode = $("viewerMode").value;
+      const url = mode === "pages" ? pagesUrl(state.activePath) : rawUrl(state.activePath);
+
+      // Prefer object with PDF MIME type and fallback link
+      const wrapper = document.createElement("div");
+      const obj = document.createElement("object");
+      obj.type = "application/pdf";
+      obj.data = url;
+      obj.width = "100%";
+      obj.height = "80vh";
+
+      const fallback = document.createElement("p");
+      const a = document.createElement("a");
+      a.href = url;
+      a.textContent = "Open PDF";
+      a.target = "_blank";
+      fallback.appendChild(document.createTextNode("Unable to display PDF. "));
+      fallback.appendChild(a);
+      obj.appendChild(fallback);
+
+      wrapper.appendChild(obj);
+      target.appendChild(wrapper);
+
+      $("viewStatus").textContent = `Viewing: ${state.activePath} via ${mode} URL`;
+    }
+
+    // Wire up events
+    window.addEventListener("DOMContentLoaded", () => {
+      loadConfig();
+
+      $("saveCfg").onclick = saveConfig;
+      $("clearCfg").onclick = clearConfig;
+
+      $("upload").onclick = async () => {
+        $("uploadStatus").textContent = "Uploading...";
+        try {
+          const file = $("file").files[0];
+          if (!file) throw new Error("Choose a PDF file.");
+          const targetName = $("filename").value.trim() || file.name;
+          const msg = $("commitMsg").value.trim() || `Add ${targetName}`;
+          const json = await uploadPDF(file, targetName, msg);
+          $("uploadStatus").innerHTML = `Success: <span class="success">${json.content && json.content.path}</span>`;
+          await listPDFs();
+        } catch (err) {
+          $("uploadStatus").innerHTML = `Error: <span class="danger">${err.message}</span>`;
+        }
+      };
+
+      $("refresh").onclick = async () => {
+        $("count").textContent = "Loading...";
+        try {
+          await listPDFs();
+        } catch (err) {
+          $("count").textContent = "Error";
+          alert(err.message);
+        }
+      };
+
+      $("search").oninput = renderList;
+      $("viewerMode").onchange = renderViewer;
+
+      // Initial list load
+      (async () => {
+        try { await listPDFs(); } catch (_) {}
+      })();
     });
   </script>
 </body>
